@@ -79,7 +79,7 @@ Have no development setup, just !!!`rebuild.sh`!!!
 
 ## Meta
 
-Pei tianyu – [微信](pty2182) – 1216582161@qq.com
+Pei tianyu – [wechat](pty2182) – 1216582161@qq.com
 
 Distributed under the MIT license. See LICENSE for more information.
 
