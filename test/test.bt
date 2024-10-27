@@ -1,0 +1,38 @@
+# func定义脚本
+var task1 = get_func "task1" # print 1
+var task2 = get_func "task2" # print 2
+var task3 = get_func "task3" # print 3
+var task4 = get_func "task4" # retrurn 0
+var task_5 = get_func "task5" # return 3--
+
+func local_task
+{
+    task1
+    task2
+}
+    
+# 执行脚本
+if task4
+{
+    task2
+    task1
+}
+else 
+{
+    local_task
+    
+    parallel 
+    {
+        task3
+        task2
+    }
+}
+    
+while task_5
+{
+    task3
+}
+    
+
+
+   
