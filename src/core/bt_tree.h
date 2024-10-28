@@ -34,28 +34,28 @@ public:
         VarMap var_map;
         std::unordered_map<std::string, std::vector<std::string>> func_map;
         std::string token;
-        while(ifs >> token) {
-            if(token == "#") {
-                ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                continue; 
-            }
-            if(token == "var") VarParse(ifs, var_map);
-            else if(token == "func") FuncParse(ifs, var_map, func_map);
-            else if(token == "if") IfParse(ifs, var_map, func_map);
-            else if(token == "while") WhileParse(ifs, var_map, func_map);
+        while(!ifs.eof()) {
+            token = GetToken(ifs);
+            if(token == "") break;
+            else if(token == "var")     VarParse(ifs, var_map);
+            else if(token == "func")    FuncParse(ifs, var_map, func_map);
+            else if(token == "if")      IfParse(ifs, var_map, func_map);
+            else if(token == "while")   WhileParse(ifs, var_map, func_map);
             else if(token == "parallel") ParallelParse(ifs, var_map, func_map);
+            else if(token == "try")     TryParse(ifs, var_map, func_map);
+            else if(token == "repeat")  RepeatParse(ifs, var_map, func_map);
             else error("invalid token: ", token);
         }
+
+        ifs.close();
     }
 private:    
     void VarParse(std::ifstream &ifs, VarMap& var_map) {
-        std::string var_name;
-        ifs >> var_name;
+        std::string var_name = GetToken(ifs);
         Expect(ifs, "=");
         Expect(ifs, "get_func");
 
-        std::string func_name;
-        ifs >> func_name;
+        std::string func_name = GetToken(ifs);
         if(!IsStr(func_name)) error("func name is not string: ", func_name);
 
         auto func = m_func[func_name.substr(1, func_name.size() - 2)];
@@ -70,14 +70,14 @@ private:
     }
 
     void FuncParse(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map) {
-        std::string func_name;
-        ifs >> func_name;
+        std::string func_name = GetToken(ifs);
 
         Expect(ifs, "{");
         
         std::vector<std::string> var_names;
         std::string var_name;
-        while(ifs >> var_name) {
+        while(1) {
+            var_name = GetToken(ifs);
             if(var_name == "}") break;
             auto func = var_map[var_name];
             if(!func) error("var not found: ", var_name);
@@ -88,8 +88,7 @@ private:
     }
 
     void IfParse(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map) {
-        std::string if_term;
-        ifs >> if_term;
+        std::string if_term = GetToken(ifs);
 
         auto func = var_map[if_term];
         int ret = func();
@@ -97,6 +96,7 @@ private:
         Expect(ifs, "{");
         IfExpr(ifs, var_map, func_map, ret);
 
+        // FIXME: 这部分token不够严谨, 可能存在bug
         if(PeekToken(ifs) == "else") {
             std::string token;
             ifs >> token; // else
@@ -106,8 +106,7 @@ private:
     }
 
     void WhileParse(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map) {
-        std::string while_term;
-        ifs >> while_term;
+        std::string while_term = GetToken(ifs);
         auto func = var_map[while_term];
         int pos = ifs.tellg();
         
@@ -123,9 +122,10 @@ private:
     void ParallelParse(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map) {
         Expect(ifs, "{");
         std::string token;
-        std::vector<std::thread> threads; // 用于存储线程
+        std::vector<std::thread> threads;
 
-        while(ifs >> token) {
+        while(1) {
+            token = GetToken(ifs);
             if(token == "}") break;
 
             auto func = var_map[token];
@@ -145,14 +145,57 @@ private:
         }
     }
 
+    void TryParse(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map) {
+        std::string try_term = GetToken(ifs);
+
+        int cnt_num = atoi(GetToken(ifs).c_str());
+        if(cnt_num <= 0) error("cnt_num <= 0: ", cnt_num);
+        int pos = ifs.tellg();
+
+        while(cnt_num--) {
+            Expect(ifs, "{");
+            auto func = var_map[try_term];
+            if(!func) error("func not found: ", try_term); 
+            if(func()) {
+                IfExpr(ifs, var_map, func_map, true);
+                break;
+            }
+            ifs.seekg(pos);
+        }
+
+        Expect(ifs, "catch");
+        Expect(ifs, "{");
+        IfExpr(ifs, var_map, func_map, (cnt_num == 0));
+    }
+
+    void RepeatParse(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map) {
+        int cnt_num = atoi(GetToken(ifs).c_str());
+        if(cnt_num <= 0) error("cnt_num <= 0: ", cnt_num);
+        int pos = ifs.tellg();
+        while(cnt_num--) {
+            ifs.seekg(pos);
+            Expect(ifs, "{");
+            IfExpr(ifs, var_map, func_map, true);
+        }
+    }
+
+    void SleepParse(std::ifstream &ifs) {
+        int sleep_time = atoi(GetToken(ifs).c_str());
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+    }
+
     void IfExpr(std::ifstream &ifs, VarMap& var_map, std::unordered_map<std::string, std::vector<std::string>>& func_map, bool run) {
         std::string token;
-        while(ifs >> token) {
+        while(1) {
+            token = GetToken(ifs);
             if(token == "}") break;
             if(run) {
                 if(token == "if") IfParse(ifs, var_map, func_map);
                 else if(token == "while") WhileParse(ifs, var_map, func_map);
                 else if(token == "parallel") ParallelParse(ifs, var_map, func_map);
+                else if(token == "try") TryParse(ifs, var_map, func_map);
+                else if(token == "repeat") RepeatParse(ifs, var_map, func_map);
+                else if(token == "sleepms") SleepParse(ifs);
                 else {
                     auto func = var_map[token];
                     if(func) func();
@@ -170,15 +213,24 @@ private:
     }
 
     void Expect(std::ifstream &ifs, const std::string &expected){
-        std::string token;
-        ifs >> token;
+        std::string token = GetToken(ifs);
         if(expected != token) error("expect: ", expected, ", but found: ", token);
     }
 
     std::string PeekToken(std::ifstream &ifs) {
+        std::string token = GetToken(ifs);
+        ifs.unget();
+        return token;
+    }
+
+    std::string GetToken(std::ifstream &ifs) {
         std::string token;
         ifs >> token;
-        ifs.unget();
+        while(token == "#" && !ifs.eof()) {
+            ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            ifs >> token; 
+        }
+        if(token == "#") return "";
         return token;
     }
 private:

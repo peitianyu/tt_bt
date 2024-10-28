@@ -15,62 +15,43 @@ cd tt_bt
 ./rebuid.sh
 ```
 
+## Script Language Description
+```
+Each token is separated by ' ', i.e. be careful when using tokens, e.g..
+    var v = get_func "task1" √
+    var v = get_func"task1" ×
+Single line comments using #
+var : means that the variable is only used to get the function
+func : denotes a function combination, used only for sequential function combinations.
+if ... else ... : judgment function
+while : repeatable
+parallal : parallal execution, all functions inside will construct a new thread and execute in parallel.
+try catch : try several times, if still fails, go to catch processing, note that as long as the execution of try, catch must be constructed
+sleepms : delay of several ms
+```
+
 ## Usage example
 
-```c++
-#include "core/tt_test.h"
-#include "core/bt_tree.h"
-
-int task4() { std::cout << "4" << std::endl; return 0; }
-int task5() { std::cout << "5" << std::endl; static int i = 3; return i--; }
-
-JUST_RUN_TEST(bt_tree, test)
-TEST(bt_tree, test)
-{
-    BtTree bt_tree;
-    bt_tree.RegisterKeyword("task1", [](){ std::cout << "1" << std::endl; return 1; });
-    bt_tree.RegisterKeyword("task2", [](){ std::cout << "2" << std::endl; return 1; });
-    bt_tree.RegisterKeyword("task3", [](){ std::cout << "3" << std::endl; return 1; });
-    bt_tree.RegisterKeyword("task4", task4);
-    bt_tree.RegisterKeyword("task5", task5);
-    bt_tree.RunScript("../test/test.bt");
-}
-```
-```sh
+```txt
 # func定义脚本
 var task1 = get_func "task1" # print 1
 var task2 = get_func "task2" # print 2
 var task3 = get_func "task3" # print 3
 var task4 = get_func "task4" # retrurn 0
 var task_5 = get_func "task5" # return 3--
+var task6 = get_func "task6"
 
-func local_task
-{
-    task1
-    task2
-}
-    
-# 执行脚本
-if task4
-{
-    task2
-    task1
-}
-else 
-{
-    local_task
-    
-    parallel 
-    {
-        task3
-        task2
-    }
-}
+func local_task { task1 task2}
 
-while task_5
-{
-    task3
-}
+if task4 { task2 task1 }
+else { local_task parallel { task3 task2 } }
+    
+while task_5 { task3 }
+
+try task6 3 { sleepms 1000 task3 }
+catch { task2 }
+
+repeat 3 { task1 }
 ```
 
 ## Development setup

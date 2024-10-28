@@ -4,6 +4,7 @@ var task2 = get_func "task2" # print 2
 var task3 = get_func "task3" # print 3
 var task4 = get_func "task4" # retrurn 0
 var task_5 = get_func "task5" # return 3--
+var task6 = get_func "task6"
 
 func local_task
 {
@@ -32,7 +33,18 @@ while task_5
 {
     task3
 }
-    
 
+try task6 3 # try_num > 0
+{
+    sleepms 1000
+    task3
+}
+catch
+{
+    task2
+}
 
-   
+repeat 3
+{
+    task1
+}
