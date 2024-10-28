@@ -20,11 +20,12 @@ cd tt_bt
 Each token is separated by ' ', i.e. be careful when using tokens, e.g..
     var v = get_func "task1" √
     var v = get_func"task1" ×
-Single line comments using #
+# : single line comments using #
 var : means that the variable is only used to get the function
 func : denotes a function combination, used only for sequential function combinations.
 if ... else ... : judgment function
 while : repeatable
+repeat : repeat several times
 parallal : parallal execution, all functions inside will construct a new thread and execute in parallel.
 try catch : try several times, if still fails, go to catch processing, note that as long as the execution of try, catch must be constructed
 sleepms : delay of several ms
